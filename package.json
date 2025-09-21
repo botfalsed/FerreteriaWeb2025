@@ -1,4 +1,12 @@
 {
+  "name": "ferreteriaweb2025",
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview"
+  },
   "dependencies": {
     "axios": "^1.11.0",
     "cors": "^2.8.5",
@@ -7,5 +15,8 @@
     "git": "^0.1.5",
     "mysql2": "^3.14.3",
     "react-router-dom": "^7.8.2"
+  },
+  "devDependencies": {
+    "vite": "^7.1.6"
   }
 }
