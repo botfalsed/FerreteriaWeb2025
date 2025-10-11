@@ -1,0 +1,10 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Código CSS MÍNIMO (opcional) */
+body {
+  /* Si usas la fuente Inter, asegúrate de importarla en index.html */
+  font-family: 'Inter', sans-serif; 
+  @apply bg-gray-50 text-gray-800; /* Aplica un fondo base */
+}

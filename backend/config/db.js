@@ -1,6 +1,7 @@
-const { Client } = require("pg");
+const { Pool } = require("pg");
 
-const client = new Client({
+// Cambiar de Client a Pool para manejar múltiples peticiones
+const pool = new Pool({
   host: "localhost",
   user: "postgres",
   password: "solsolperez",
@@ -8,8 +9,8 @@ const client = new Client({
   port: 5432
 });
 
-client.connect()
+pool.connect()
   .then(() => console.log("✅ Conectado a PostgreSQL"))
   .catch(err => console.error("❌ Error al conectar a PostgreSQL:", err));
 
-module.exports = client;
+module.exports = pool;
