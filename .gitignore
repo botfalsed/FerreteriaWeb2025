@@ -1,0 +1,11 @@
+# Dependencias
+node_modules/
+package-lock.json
+
+# Configuración sensible
+backend/config/db.js
+.env
+
+# Archivos del sistema
+.DS_Store
+Thumbs.db

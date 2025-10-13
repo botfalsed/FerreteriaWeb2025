@@ -7,7 +7,8 @@ import "./assets/css/index.css";
 import App from "./App.jsx";
 
 // Componentes de Autenticación y Dashboard
-import Login from "./auth/login.jsx"; 
+// Importación corregida a mayúscula 'L' para evitar problemas:
+import Login from "./auth/Login.jsx"; 
 import Dashboard from "./dashboard/Dashboard.jsx"; 
 
 // Páginas del Dashboard
@@ -21,55 +22,57 @@ import Reportes from "./dashboard/pages/Reportes.jsx";
 
 // Componente para proteger rutas privadas
 const ProtectedRoute = ({ children }) => {
-  const isAuthenticated = localStorage.getItem('isAuthenticated') === 'true'; 
+  const isAuthenticated = localStorage.getItem('isAuthenticated') === 'true'; 
 
-  if (!isAuthenticated) {
-    return <Navigate to="/administrador/login" replace />;
-  }
+  if (!isAuthenticated) {
+    // Si no está autenticado, siempre va a la ruta de login
+    return <Navigate to="/administrador/login" replace />;
+  }
 
-  return children;
+  return children;
 };
 
 
 createRoot(document.getElementById("root")).render(
-  <StrictMode>
-    <BrowserRouter>
-      <Routes>
-        
-        {/* Rutas Públicas */}
-        <Route path="/" element={<App />} />
+  <StrictMode>
+    <BrowserRouter>
+      <Routes>
+        
+        {/* Rutas Públicas */}
+        <Route path="/" element={<App />} />
 
-        {/* Ruta de Login para Administrador */}
-        <Route path="/administrador/login" element={<Login />} />
+        {/* Ruta de Login para Administrador */}
+        <Route path="/administrador/login" element={<Login />} />
 
-        {/* Redirección de /administrador al login */}
-        <Route path="/administrador" element={<Navigate to="/administrador/login" replace />} />
+        {/* Redirección: /administrador va a /administrador/login */}
+        {/* Esto es útil si alguien escribe solo /administrador */}
+        <Route path="/administrador" element={<Navigate to="/administrador/login" replace />} />
 
-        {/* RUTAS DEL DASHBOARD (PROTEGIDAS) */}
-        <Route
-          path="/administrador/dashboard"
-          element={
-            <ProtectedRoute>
-              <Dashboard />
-            </ProtectedRoute>
-          }
-        >
-          {/* Rutas anidadas */}
-          <Route path="home" element={<Home />} />
-          <Route path="productos" element={<Productos />} />
-          <Route path="ventas" element={<Ventas />} />
-          <Route path="proveedores" element={<Proveedores />} />
-          <Route path="usuarios" element={<Usuarios />} />
-          <Route path="reportes" element={<Reportes />} />
-          
-          {/* Redirección por defecto: /administrador/dashboard -> /administrador/dashboard/home */}
-          <Route index element={<Navigate to="home" replace />} />
-        </Route>
-        
-        {/* Manejo de rutas no encontradas */}
-        <Route path="*" element={<h1 className="text-3xl p-10 text-red-600">404 | Página no encontrada</h1>} />
+        {/* RUTAS DEL DASHBOARD (PROTEGIDAS) */}
+        <Route
+          path="/administrador/dashboard"
+          element={
+            <ProtectedRoute>
+              <Dashboard />
+            </ProtectedRoute>
+          }
+        >
+          {/* Rutas anidadas */}
+          <Route path="home" element={<Home />} />
+          <Route path="productos" element={<Productos />} />
+          <Route path="ventas" element={<Ventas />} />
+          <Route path="proveedores" element={<Proveedores />} />
+          <Route path="usuarios" element={<Usuarios />} />
+          <Route path="reportes" element={<Reportes />} />
+          
+          {/* Redirección por defecto: /administrador/dashboard -> /administrador/dashboard/home */}
+          <Route index element={<Navigate to="home" replace />} />
+        </Route>
+        
+        {/* Manejo de rutas no encontradas */}
+        <Route path="*" element={<h1 className="text-3xl p-10 text-red-600">404 | Página no encontrada</h1>} />
 
-      </Routes>
-    </BrowserRouter>
-  </StrictMode>
+      </Routes>
+    </BrowserRouter>
+  </StrictMode>
 );
