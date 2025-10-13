@@ -1,15 +1,67 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import ProductosPublicos from "./Publico/ProductosPublicos";
 import Nosotros from "./Publico/nosotros";
 import Contacto from "./Publico/conctatos";
 import { Search, ClipboardList, BookOpen, User, Menu, X, ShoppingCart } from "lucide-react";
+import axios from "axios"; // Para requests
 
 function App() {
   const [currentPage, setCurrentPage] = useState("home");
   const [searchTerm, setSearchTerm] = useState("");
   const [isMenuOpen, setIsMenuOpen] = useState(false);
-  const [cart, setCart] = useState([]); // Estado para el carrito
-  const [isCartOpen, setIsCartOpen] = useState(false); // Estado para el panel del carrito
+  const [cart, setCart] = useState([]);
+  const [isCartOpen, setIsCartOpen] = useState(false);
+  const [featuredProducts, setFeaturedProducts] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+
+  const UNSPLASH_ACCESS_KEY = "F4MhxP1__NVnc-R_lnAbyYWOvYzipD9d0Wa42V6GPVU"; // Pega tu Access Key de Unsplash aquí
+
+  // Fetch de productos desde tu API + imágenes de Unsplash
+  useEffect(() => {
+    const fetchFeaturedProducts = async () => {
+      try {
+        setLoading(true);
+        setError(null);
+        // Paso 1: Carga productos de tu API
+        const response = await fetch('http://localhost:3001/api/publico/productos');
+        if (!response.ok) {
+          throw new Error(`Error HTTP: ${response.status}`);
+        }
+        const allProducts = await response.json();
+        const shuffled = allProducts.sort(() => 0.5 - Math.random()).slice(0, 4);
+        // Paso 2: Añade imágenes con Unsplash
+        const productsWithImages = await Promise.all(shuffled.map(async (product) => {
+          try {
+            // Palabra clave para búsqueda (ajusta para productos de ferretería)
+          const keyword = product.nombre.toLowerCase().includes('rectificadora') ? 'grinder tool' :
+                          product.nombre.toLowerCase().includes('martillo') ? 'hammer tool' :
+                          product.nombre.toLowerCase().includes('taladro') ? 'drill tool' :
+                          product.nombre.toLowerCase().includes('destornillador') ? 'screwdriver tool' :
+                          'tool'
+            const imageResponse = await axios.get(`https://api.unsplash.com/search/photos`, {
+              params: { query: keyword, per_page: 1 },
+              headers: { Authorization: `Client-ID ${UNSPLASH_ACCESS_KEY}` }
+            });
+            const imageUrl = imageResponse.data.results[0]?.urls?.small || 
+                             'https://placehold.co/250x150/007bff/ffffff?text=Producto'; // Fallback
+            return { ...product, image_url: imageUrl };
+          } catch (imgError) {
+            console.error('Error cargando imagen para', product.nombre, imgError);
+            return { ...product, image_url: 'https://placehold.co/250x150/007bff/ffffff?text=Producto' };
+          }
+        }));
+        setFeaturedProducts(productsWithImages);
+      } catch (error) {
+        console.error('Error en fetch:', error.message);
+        setError(`No se pudieron cargar los productos: ${error.message}`);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchFeaturedProducts();
+  }, []);
 
   const handleNavigation = (page) => {
     setCurrentPage(page);
@@ -28,43 +80,52 @@ function App() {
     setIsCartOpen(!isCartOpen);
   };
 
-  // Función para añadir al carrito
   const addToCart = (product) => {
     setCart((prevCart) => {
       const existingItem = prevCart.find((item) => item.codigo === product.codigo);
       if (existingItem) {
+        if (existingItem.quantity + 1 > product.existencias) {
+          alert(`No hay suficiente stock disponible para ${product.nombre}. Stock: ${product.existencias}`);
+          return prevCart;
+        }
         return prevCart.map((item) =>
           item.codigo === product.codigo
             ? { ...item, quantity: item.quantity + 1 }
             : item
         );
       }
+      if (product.existencias <= 0) {
+        alert(`${product.nombre} no tiene stock disponible.`);
+        return prevCart;
+      }
       return [...prevCart, { ...product, quantity: 1 }];
     });
   };
 
-  // Función para eliminar del carrito
   const removeFromCart = (codigo) => {
     setCart((prevCart) => prevCart.filter((item) => item.codigo !== codigo));
   };
 
-  // Función para actualizar la cantidad
   const updateQuantity = (codigo, quantity) => {
     if (quantity <= 0) {
       removeFromCart(codigo);
     } else {
-      setCart((prevCart) =>
-        prevCart.map((item) =>
+      setCart((prevCart) => {
+        const item = prevCart.find((item) => item.codigo === codigo);
+        if (item && quantity > item.existencias) {
+          alert(`No puedes agregar más de ${item.existencias} unidades de ${item.nombre}.`);
+          return prevCart;
+        }
+        return prevCart.map((item) =>
           item.codigo === codigo ? { ...item, quantity } : item
-        )
-      );
+        );
+      });
     }
   };
 
-  // Calcular subtotal
   const calculateSubtotal = () => {
     return cart
-      .reduce((total, item) => total + item.precio_venta * item.quantity, 0)
+      .reduce((total, item) => total + (parseFloat(item.precio_venta || 0) * (item.quantity || 0)), 0)
       .toFixed(2);
   };
 
@@ -94,48 +155,47 @@ function App() {
         <h3 className="text-3xl md:text-4xl font-semibold text-gray-800 mb-8 border-b-4 border-blue-600 pb-3 text-center">
           Productos Destacados
         </h3>
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-          {[1, 2, 3, 4].map((_, index) => {
-            const mockProduct = {
-              codigo: `DESTACADO${index + 1}`,
-              nombre: `Producto Destacado ${index + 1}`,
-              descripcion: "Descripción breve del producto.",
-              precio_venta: 15.0,
-              existencias: 10,
-              unidaddemedida: "Unidad",
-            };
-            return (
+        {loading ? (
+          <p className="text-center text-gray-600">Cargando productos...</p>
+        ) : error ? (
+          <p className="text-center text-red-600">{error}</p>
+        ) : featuredProducts.length === 0 ? (
+          <p className="text-center text-gray-600">No hay productos disponibles.</p>
+        ) : (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+            {featuredProducts.map((product, index) => (
               <div
-                key={index}
+                key={product.codigo}
                 className="bg-white rounded-2xl shadow-lg hover:shadow-xl transition duration-300 overflow-hidden transform hover:-translate-y-2"
               >
                 <img
-                  src={`https://placehold.co/250x150/007bff/ffffff?text=Producto${index + 1}`}
-                  alt="Producto destacado"
+                  src={product.image_url || `https://placehold.co/250x150/007bff/ffffff?text=${product.nombre.substring(0, 10)}`}
+                  alt={product.nombre}
                   className="w-full h-48 object-cover"
                 />
                 <div className="p-6">
                   <h3 className="text-xl font-bold text-gray-900 mb-2">
-                    {mockProduct.nombre}
+                    {product.nombre} <span className="text-sm text-gray-500">(Código: {product.codigo})</span>
                   </h3>
                   <p className="text-sm text-gray-600 mb-4">
-                    {mockProduct.descripcion}
+                    {product.descripcion || "Sin descripción"}
                   </p>
                   <p className="text-xl font-extrabold text-blue-600 mb-4">
-                    S/ {mockProduct.precio_venta.toFixed(2)}
+                    S/ {parseFloat(product.precio_venta || 0).toFixed(2)}
                   </p>
+                  <p className="text-xs text-gray-500 mb-2">Stock: {product.existencias || 0} {product.unidaddemedida || "unidades"}</p>
                   <button
                     className="w-full bg-blue-600 text-white py-2 rounded-lg font-semibold hover:bg-blue-700 transition disabled:bg-gray-400 disabled:cursor-not-allowed"
-                    onClick={() => addToCart(mockProduct)}
-                    disabled={mockProduct.existencias <= 0}
+                    onClick={() => addToCart(product)}
+                    disabled={(product.existencias || 0) <= 0}
                   >
-                    Añadir al Carrito
+                    {((product.existencias || 0) > 0) ? "Añadir al Carrito" : "Sin Stock"}
                   </button>
                 </div>
               </div>
-            );
-          })}
-        </div>
+            ))}
+          </div>
+        )}
       </section>
     </main>
   );
@@ -231,7 +291,7 @@ function App() {
                 <ShoppingCart size={24} />
                 {cart.length > 0 && (
                   <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">
-                    {cart.reduce((total, item) => total + item.quantity, 0)}
+                    {cart.reduce((total, item) => total + (item.quantity || 0), 0)}
                   </span>
                 )}
               </button>
@@ -329,23 +389,23 @@ function App() {
                 >
                   <div>
                     <h3 className="text-sm font-semibold text-gray-800">
-                      {item.nombre}
+                      {item.nombre} (Código: {item.codigo})
                     </h3>
                     <p className="text-xs text-gray-500">
-                      S/ {item.precio_venta.toFixed(2)} x {item.quantity}
+                      S/ {parseFloat(item.precio_venta || 0).toFixed(2)} x {item.quantity}
                     </p>
                     <div className="flex items-center mt-1">
                       <button
                         className="px-2 py-1 text-gray-600 hover:bg-gray-100 rounded"
-                        onClick={() => updateQuantity(item.codigo, item.quantity - 1)}
+                        onClick={() => updateQuantity(item.codigo, (item.quantity || 0) - 1)}
                       >
                         -
                       </button>
-                      <span className="px-2">{item.quantity}</span>
+                      <span className="px-2">{item.quantity || 0}</span>
                       <button
                         className="px-2 py-1 text-gray-600 hover:bg-gray-100 rounded"
-                        onClick={() => updateQuantity(item.codigo, item.quantity + 1)}
-                        disabled={item.quantity >= item.existencias}
+                        onClick={() => updateQuantity(item.codigo, (item.quantity || 0) + 1)}
+                        disabled={(item.quantity || 0) >= (item.existencias || 0)}
                       >
                         +
                       </button>

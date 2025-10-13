@@ -1,10 +1,158 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { Search, ChevronDown, Filter, Loader2, Zap, ShoppingCart, X, Eye } from "lucide-react";
+import axios from "axios";
 
-// URL base de la API
 const API_BASE_URL = "http://localhost:3001";
+const UNSPLASH_ACCESS_KEY = "F4MhxP1__NVnc-R_lnAbyYWOvYzipD9d0Wa42V6GPVU";
 
-// Componente para manejar el estado de carga y error
+// Función mejorada para obtener palabras clave de búsqueda de imágenes
+const getImageKeyword = (productName) => {
+  const name = productName.toLowerCase();
+  
+  // Diccionario extenso de productos de ferretería
+  const keywords = {
+    // Herramientas manuales
+    'alicate': 'pliers tool hardware',
+    'pinza': 'pliers tool',
+    'tenaza': 'pliers gripping tool',
+    'destornillador': 'screwdriver tool',
+    'desarmador': 'screwdriver tool',
+    'martillo': 'hammer tool',
+    'mazo': 'mallet hammer',
+    'serrucho': 'handsaw tool',
+    'sierra': 'saw tool hardware',
+    'llave': 'wrench tool',
+    'llave inglesa': 'adjustable wrench',
+    'llave francesa': 'pipe wrench',
+    'llave allen': 'allen wrench hex key',
+    'llave torx': 'torx wrench',
+    'cutter': 'utility knife cutter',
+    'tijera': 'scissors cutting tool',
+    'cortador': 'cutter tool',
+    'nivel': 'level tool',
+    'escuadra': 'square tool',
+    'compas': 'compass tool',
+    'wincha': 'tape measure',
+    'flexometro': 'tape measure',
+    'cinta metrica': 'measuring tape',
+    'metro': 'measuring tape',
+    
+    // Herramientas eléctricas
+    'taladro': 'electric drill power tool',
+    'berbiqui': 'hand drill brace',
+    'amoladora': 'angle grinder tool',
+    'esmeril': 'bench grinder',
+    'pulidora': 'polisher tool',
+    'lijadora': 'sander power tool',
+    'sierra circular': 'circular saw',
+    'sierra caladora': 'jigsaw power tool',
+    'rotomartillo': 'rotary hammer drill',
+    'atornillador': 'screwdriver power tool',
+    'soldador': 'soldering iron',
+    'pistola de calor': 'heat gun',
+    'compresor': 'air compressor',
+    
+    // Accesorios y consumibles
+    'broca': 'drill bit set',
+    'mecha': 'drill bit',
+    'disco': 'cutting disc wheel',
+    'disco de corte': 'cutting disc',
+    'disco de desbaste': 'grinding disc',
+    'lija': 'sandpaper',
+    'papel de lija': 'sandpaper sheets',
+    'cepillo': 'wire brush tool',
+    'brocha': 'paint brush',
+    'rodillo': 'paint roller',
+    'tornillo': 'screw hardware',
+    'perno': 'bolt hardware',
+    'tuerca': 'nut hardware',
+    'clavo': 'nail hardware',
+    'taco': 'wall anchor',
+    'taruga': 'wall plug anchor',
+    'arandela': 'washer hardware',
+    'abrazadera': 'clamp tool',
+    'prensa': 'clamp vice',
+    
+    // Materiales eléctricos
+    'cable': 'electrical cable wire',
+    'alambre': 'electrical wire',
+    'enchufe': 'electrical outlet plug',
+    'interruptor': 'electrical switch',
+    'tomacorriente': 'electrical socket',
+    'foco': 'light bulb',
+    'lampara': 'lamp fixture',
+    'reflector': 'floodlight',
+    'extension': 'extension cord',
+    'cinta aislante': 'electrical tape',
+    'terminal': 'electrical terminal connector',
+    'conector': 'electrical connector',
+    
+    // Plomería
+    'tubo': 'pipe plumbing',
+    'tuberia': 'plumbing pipe',
+    'codo': 'pipe elbow fitting',
+    'tee': 'pipe tee fitting',
+    'reduccion': 'pipe reducer fitting',
+    'valvula': 'valve plumbing',
+    'llave de paso': 'shut off valve',
+    'grifo': 'faucet tap',
+    'canilla': 'faucet',
+    'sifon': 'drain trap',
+    'cinta teflon': 'teflon tape plumbing',
+    'sellador': 'sealant',
+    
+    // Seguridad
+    'guante': 'work gloves safety',
+    'lentes': 'safety glasses',
+    'casco': 'hard hat safety helmet',
+    'mascarilla': 'dust mask respirator',
+    'tapones': 'ear plugs safety',
+    'chaleco': 'safety vest',
+    'arnes': 'safety harness',
+    
+    // Adhesivos y químicos
+    'pegamento': 'adhesive glue',
+    'cola': 'glue adhesive',
+    'silicona': 'silicone sealant',
+    'cemento': 'cement concrete',
+    'yeso': 'plaster',
+    'masilla': 'putty filler',
+    'pintura': 'paint',
+    'barniz': 'varnish',
+    'thinner': 'paint thinner',
+    'aceite': 'oil lubricant',
+    'grasa': 'grease lubricant',
+    'wd40': 'lubricant spray',
+    
+    // Otros
+    'carretilla': 'wheelbarrow cart',
+    'escalera': 'ladder',
+    'andamio': 'scaffolding',
+    'cuerda': 'rope cord',
+    'soga': 'rope',
+    'cadena': 'chain hardware',
+    'candado': 'padlock',
+    'cerradura': 'door lock',
+    'bisagra': 'door hinge',
+    'manija': 'door handle',
+    'pomo': 'door knob',
+    'manguera': 'hose',
+    'balde': 'bucket',
+    'bolsa': 'bag',
+  };
+  
+  // Buscar coincidencias en el diccionario
+  for (const [key, value] of Object.entries(keywords)) {
+    if (name.includes(key)) {
+      return value;
+    }
+  }
+  
+  // Si no encuentra coincidencia, usar la primera palabra + "tool hardware"
+  const firstWord = name.split(' ')[0];
+  return `${firstWord} hardware tool`;
+};
+
 const StatusDisplay = ({ isLoading, error, children }) => {
   if (isLoading) {
     return (
@@ -26,7 +174,6 @@ const StatusDisplay = ({ isLoading, error, children }) => {
   return children;
 };
 
-// Componente para el Modal de Detalle del Producto
 const ProductDetailModal = ({ producto, onClose, addToCart }) => {
   if (!producto) return null;
 
@@ -56,6 +203,7 @@ const ProductDetailModal = ({ producto, onClose, addToCart }) => {
   const imagePlaceholder = `https://placehold.co/400x300/007bff/ffffff?text=${encodeURIComponent(
     producto.nombre.slice(0, 25)
   )}`;
+  const imageUrl = producto.image_url || imagePlaceholder;
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
@@ -68,9 +216,10 @@ const ProductDetailModal = ({ producto, onClose, addToCart }) => {
           <X size={20} />
         </button>
         <img
-          src={imagePlaceholder}
+          src={imageUrl}
           alt={`Imagen de ${producto.nombre}`}
           className="w-full h-48 object-cover rounded-t-xl bg-blue-500"
+          onError={(e) => (e.target.src = imagePlaceholder)}
         />
         <div className="p-6">
           <div className="flex justify-between items-start mb-3 border-b pb-3">
@@ -80,11 +229,16 @@ const ProductDetailModal = ({ producto, onClose, addToCart }) => {
             <div
               className={`flex-shrink-0 px-3 py-1 text-sm font-bold rounded-full text-white shadow-md ${stockTagColor}`}
             >
-              {isAgotado ? "AGOTADO" : isPocoStock ? `STOCK BAJO: ${existencias}` : `Stock: ${existencias}`}
+              {isAgotado
+                ? "AGOTADO"
+                : isPocoStock
+                ? `STOCK BAJO: ${existencias}`
+                : `Stock: ${existencias}`}
             </div>
           </div>
           <p className="text-gray-600 mb-4 text-sm">
-            {producto.descripcion || "Este producto no tiene una descripción detallada. Consulte vía WhatsApp para más información."}
+            {producto.descripcion ||
+              "Este producto no tiene una descripción detallada. Consulte vía WhatsApp para más información."}
           </p>
           <div className="grid grid-cols-2 gap-4 text-sm mb-6">
             <div className="space-y-1">
@@ -113,7 +267,9 @@ const ProductDetailModal = ({ producto, onClose, addToCart }) => {
               onClick={handleAddToCart}
               disabled={isAgotado}
               className={`w-full inline-flex justify-center items-center text-white py-3 rounded-lg font-bold transition duration-300 shadow-lg mb-3 ${
-                isAgotado ? "bg-red-500 opacity-80 cursor-not-allowed" : "bg-blue-600 hover:bg-blue-700"
+                isAgotado
+                  ? "bg-red-500 opacity-80 cursor-not-allowed"
+                  : "bg-blue-600 hover:bg-blue-700"
               }`}
             >
               <ShoppingCart size={22} className="mr-2" />
@@ -147,7 +303,6 @@ const ProductDetailModal = ({ producto, onClose, addToCart }) => {
   );
 };
 
-// Componente para la Card de Producto
 const ProductCard = ({ producto, onOpenDetail, addToCart }) => {
   const existencias = parseFloat(producto.existencias) || 0;
   const isAgotado = existencias <= 0;
@@ -157,12 +312,13 @@ const ProductCard = ({ producto, onOpenDetail, addToCart }) => {
   if (isAgotado) {
     stockTag = { text: "AGOTADO", color: "bg-red-500 text-white" };
   } else if (isPocoStock) {
-    stockTag = { text: `STOCK BAJO`, color: "bg-yellow-400 text-gray-900" };
+    stockTag = { text: "STOCK BAJO", color: "bg-yellow-400 text-gray-900" };
   }
 
   const imagePlaceholder = `https://placehold.co/250x150/007bff/ffffff?text=${encodeURIComponent(
     producto.nombre.slice(0, 15)
   )}`;
+  const imageUrl = producto.image_url || imagePlaceholder;
 
   return (
     <div
@@ -173,9 +329,10 @@ const ProductCard = ({ producto, onOpenDetail, addToCart }) => {
     >
       <div className="relative">
         <img
-          src={imagePlaceholder}
+          src={imageUrl}
           alt={`Imagen de ${producto.nombre}`}
           className="w-full h-40 object-cover bg-blue-500"
+          onError={(e) => (e.target.src = imagePlaceholder)}
         />
         {stockTag && (
           <div
@@ -208,10 +365,12 @@ const ProductCard = ({ producto, onOpenDetail, addToCart }) => {
           </p>
           <button
             className={`w-full inline-flex justify-center items-center text-white py-2 rounded-lg font-semibold transition duration-300 shadow-lg ${
-              isAgotado ? "bg-red-500 opacity-80 cursor-not-allowed" : "bg-blue-600 hover:bg-blue-700"
+              isAgotado
+                ? "bg-red-500 opacity-80 cursor-not-allowed"
+                : "bg-blue-600 hover:bg-blue-700"
             }`}
             onClick={(e) => {
-              e.stopPropagation(); // Evita que se abra el modal al hacer clic en el botón
+              e.stopPropagation();
               if (!isAgotado) {
                 addToCart(producto);
                 alert(`${producto.nombre} añadido al carrito`);
@@ -228,7 +387,6 @@ const ProductCard = ({ producto, onOpenDetail, addToCart }) => {
   );
 };
 
-// Componente Principal
 const PublicProductCatalog = ({ onNavigate, addToCart, cart }) => {
   const [productos, setProductos] = useState([]);
   const [categorias, setCategorias] = useState([]);
@@ -242,8 +400,6 @@ const PublicProductCatalog = ({ onNavigate, addToCart, cart }) => {
     const existencias = parseFloat(producto.existencias) || 0;
     if (existencias > 0) {
       setSelectedProduct(producto);
-    } else {
-      console.log(`El producto ${producto.nombre} está agotado. No se muestra el modal de compra.`);
     }
   };
 
@@ -255,46 +411,32 @@ const PublicProductCatalog = ({ onNavigate, addToCart, cart }) => {
     setIsLoading(true);
     setError(null);
     try {
-      const maxRetries = 3;
-      let response = null;
-      let errorDetails = null;
-
-      for (let i = 0; i < maxRetries; i++) {
-        try {
-          response = await fetch(`${API_BASE_URL}/api/publico/productos`);
-          if (response.ok) {
-            break;
-          }
-          const statusText = response.statusText || "Error desconocido";
-          errorDetails = `Error ${response.status}: ${statusText}`;
-        } catch (err) {
-          errorDetails = `Error de conexión: ${err.message}`;
-        }
-
-        if (i < maxRetries - 1) {
-          const delay = Math.pow(2, i) * 1000;
-          await new Promise((resolve) => setTimeout(resolve, delay));
-        }
-      }
-
-      if (!response || !response.ok) {
-        throw new Error(errorDetails || "Fallo en la respuesta del servidor");
+      const response = await fetch(`${API_BASE_URL}/api/publico/productos`);
+      
+      if (!response.ok) {
+        throw new Error(`Error ${response.status}: ${response.statusText}`);
       }
 
       const data = await response.json();
-      setProductos(data);
+      console.log(`✅ ${data.length} productos cargados`);
+      
+      // Cargar productos inmediatamente con placeholders
+      const productsWithPlaceholders = data.map(product => ({
+        ...product,
+        image_url: `https://placehold.co/250x150/007bff/ffffff?text=${encodeURIComponent(
+          product.nombre.slice(0, 15)
+        )}`
+      }));
+      
+      setProductos(productsWithPlaceholders);
 
+      // Extraer categorías únicas
       const uniqueCategories = data
         .reduce((acc, current) => {
           const id = current.categoria_id;
           const nombre = current.categoria_nombre;
 
-          if (
-            id &&
-            nombre &&
-            nombre !== "Sin Categoría" &&
-            !acc.some((cat) => cat.id === id)
-          ) {
+          if (id && nombre && nombre !== "Sin Categoría" && !acc.some((cat) => cat.id === id)) {
             acc.push({ id, nombre });
           }
           return acc;
@@ -302,6 +444,58 @@ const PublicProductCatalog = ({ onNavigate, addToCart, cart }) => {
         .sort((a, b) => a.nombre.localeCompare(b.nombre));
 
       setCategorias(uniqueCategories);
+
+      // Cargar imágenes de Unsplash SOLO para los primeros 50 productos (límite API)
+      // Los demás usarán placeholders
+      const LIMIT_IMAGES = 50; // Límite de imágenes a cargar por sesión
+      
+      const productsToLoadImages = data.slice(0, LIMIT_IMAGES);
+      
+      console.log(`🖼️ Cargando imágenes para ${productsToLoadImages.length} productos...`);
+      
+      const imagePromises = productsToLoadImages.map(async (product, index) => {
+        // Agregar delay entre peticiones para no saturar la API
+        await new Promise(resolve => setTimeout(resolve, index * 100));
+        
+        try {
+          const keyword = getImageKeyword(product.nombre);
+          const imageResponse = await axios.get(`https://api.unsplash.com/search/photos`, {
+            params: { query: keyword, per_page: 1, orientation: 'landscape' },
+            headers: { Authorization: `Client-ID ${UNSPLASH_ACCESS_KEY}` },
+          });
+          
+          const imageUrl = imageResponse.data.results[0]?.urls?.small;
+          
+          if (imageUrl) {
+            return { codigo: product.codigo, image_url: imageUrl };
+          }
+          return null;
+        } catch (imgError) {
+          console.error(`Error cargando imagen para ${product.nombre}:`, imgError.message);
+          return null;
+        }
+      });
+
+      // Esperar a que se carguen las imágenes
+      const imageResults = await Promise.all(imagePromises);
+      
+      // Actualizar solo los productos que tienen imagen
+      const imageMap = {};
+      imageResults.forEach(result => {
+        if (result) {
+          imageMap[result.codigo] = result.image_url;
+        }
+      });
+
+      setProductos(prevProducts => 
+        prevProducts.map(product => ({
+          ...product,
+          image_url: imageMap[product.codigo] || product.image_url
+        }))
+      );
+      
+      console.log(`✅ ${Object.keys(imageMap).length} imágenes cargadas desde Unsplash`);
+      
     } catch (err) {
       console.error("Error fetching products:", err);
       setError(`Error de conexión o de datos: ${err.message}`);
@@ -314,17 +508,28 @@ const PublicProductCatalog = ({ onNavigate, addToCart, cart }) => {
     fetchProductos();
   }, [fetchProductos]);
 
+  // ✅ BUSCADOR ARREGLADO
   const productosFiltrados = productos.filter((producto) => {
-    const matchesSearch = searchTerm
-      ? producto.nombre?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        producto.codigo?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        producto.descripcion?.toLowerCase().includes(searchTerm.toLowerCase())
+    // Filtrar por búsqueda (si hay texto, busca; si no hay texto, muestra todos)
+    const matchesSearch = searchTerm.trim()
+      ? (producto.nombre?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+         producto.codigo?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+         producto.descripcion?.toLowerCase().includes(searchTerm.toLowerCase()))
       : true;
 
-    const matchesCategory =
-      filtroCategoria !== null ? parseInt(producto.categoria_id) === filtroCategoria : true;
+    // Filtrar por categoría
+    const matchesCategory = filtroCategoria !== null
+      ? parseInt(producto.categoria_id) === filtroCategoria
+      : true;
 
     return matchesSearch && matchesCategory;
+  });
+
+  console.log('📊 Filtrado:', {
+    totalProductos: productos.length,
+    productosFiltrados: productosFiltrados.length,
+    filtroCategoria: filtroCategoria,
+    searchTerm: searchTerm
   });
 
   return (
@@ -353,7 +558,7 @@ const PublicProductCatalog = ({ onNavigate, addToCart, cart }) => {
                 <div className="relative">
                   <input
                     type="text"
-                    placeholder="Escribe para buscar (Ej: 'cla', 'mart', 'COD001')"
+                    placeholder="Escribe para buscar..."
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
                     className="w-full pl-10 pr-4 py-2 text-sm bg-gray-50 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
@@ -400,20 +605,15 @@ const PublicProductCatalog = ({ onNavigate, addToCart, cart }) => {
           </aside>
           <main className="lg:col-span-3">
             <div className="mb-6 pb-4 border-b border-gray-200">
-              {isLoading ? (
-                <h2 className="text-2xl font-bold text-gray-800">Cargando Resultados...</h2>
-              ) : (
-                <h2 className="text-2xl font-bold text-gray-800">
-                  <span className="text-blue-600">{productosFiltrados.length}</span> Resultado
-                  {productosFiltrados.length !== 1 ? "s" : ""}
-                  {filtroCategoria !== null && (
-                    <span className="text-gray-600">
-                      {" "}
-                      en: {categorias.find((c) => c.id === filtroCategoria)?.nombre || ""}
-                    </span>
-                  )}
-                </h2>
-              )}
+              <h2 className="text-2xl font-bold text-gray-800">
+                <span className="text-blue-600">{productosFiltrados.length}</span> Resultado
+                {productosFiltrados.length !== 1 ? "s" : ""}
+                {filtroCategoria !== null && (
+                  <span className="text-gray-600">
+                    {" "}en: {categorias.find((c) => c.id === filtroCategoria)?.nombre || ""}
+                  </span>
+                )}
+              </h2>
             </div>
             <StatusDisplay isLoading={isLoading} error={error}>
               {productosFiltrados.length > 0 ? (
@@ -428,22 +628,24 @@ const PublicProductCatalog = ({ onNavigate, addToCart, cart }) => {
                   ))}
                 </div>
               ) : (
-                !isLoading && (
-                  <div className="text-center p-16 bg-white rounded-xl shadow-lg">
-                    <h3 className="text-2xl font-semibold text-gray-700">
-                      No se encontraron productos
-                    </h3>
-                    <p className="text-gray-500 mt-2">
-                      Intenta ajustar tus filtros o buscar con un término diferente.
-                    </p>
-                  </div>
-                )
+                <div className="text-center p-16 bg-white rounded-xl shadow-lg">
+                  <h3 className="text-2xl font-semibold text-gray-700">
+                    No se encontraron productos
+                  </h3>
+                  <p className="text-gray-500 mt-2">
+                    Intenta ajustar tus filtros o buscar con un término diferente.
+                  </p>
+                </div>
               )}
             </StatusDisplay>
           </main>
         </div>
       </div>
-      <ProductDetailModal producto={selectedProduct} onClose={handleCloseDetail} addToCart={addToCart} />
+      <ProductDetailModal
+        producto={selectedProduct}
+        onClose={handleCloseDetail}
+        addToCart={addToCart}
+      />
     </div>
   );
 };

@@ -224,10 +224,9 @@ app.get("/api/publico/productos", async (req, res) => {
             p.unidaddemedida,
             p.precioalpublico AS precio_venta,
             
-            -- 🔥 IMPORTANTE: convertir el id a entero para evitar errores de tipo
+           
             CAST(p.categoria_id AS INTEGER) AS categoria_id,
             
-            -- Si no hay categoría, se pone "Sin Categoría"
             COALESCE(c.nombre, 'Sin Categoría') AS categoria_nombre,
             COALESCE(c.descripcion, '') AS categoria_descripcion
 
